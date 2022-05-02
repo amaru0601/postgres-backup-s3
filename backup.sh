@@ -67,15 +67,13 @@ fi
 if [ "${POSTGRES_BACKUP_ALL}" == "true" ]; then
   echo "Creating dump of all databases from ${POSTGRES_HOST}..."
 
-  pg_dumpall -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER | gzip > dump.sql.gz
-
+  pg_dumpall -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER --format tar > dump.tar
   echo "Uploading dump to $S3_BUCKET"
 
-  cat dump.sql.gz | aws $AWS_ARGS s3 cp - "s3://${S3_BUCKET}${S3_PREFIX}all_$(date +"%Y-%m-%dT%H:%M:%SZ").sql.gz" || exit 2
-
+  cat dump.tar | aws $AWS_ARGS s3 cp - "s3://${S3_BUCKET}${S3_PREFIX}all_$(date +"%Y-%m-%dT%H:%M:%SZ").tar" || exit 2
   echo "SQL backup uploaded successfully"
 
-  rm -rf dump.sql.gz
+  rm -rf dump.tar
 else
   OIFS="$IFS"
   IFS=','
@@ -84,15 +82,12 @@ else
     IFS="$OIFS"
 
     echo "Creating dump of ${DB} database from ${POSTGRES_HOST}..."
-
-    pg_dump $POSTGRES_HOST_OPTS $DB | gzip > dump.sql.gz
+    pg_dump $POSTGRES_HOST_OPTS $DB --format tar > dump.tar
 
     echo "Uploading dump to $S3_BUCKET"
-
-    cat dump.sql.gz | aws $AWS_ARGS s3 cp - "s3://${S3_BUCKET}${S3_PREFIX}${DB}_$(date +"%Y-%m-%dT%H:%M:%SZ").sql.gz" || exit 2
+    cat dump.tar | aws $AWS_ARGS s3 cp - "s3://${S3_BUCKET}${S3_PREFIX}${DB}_$(date +"%Y-%m-%dT%H:%M:%SZ").tar" || exit 2
 
     echo "SQL backup uploaded successfully"
-
-    rm -rf dump.sql.gz
+    rm -rf dump.tar
   done
 fi
